@@ -72,12 +72,12 @@ class TCP_Receiver(Receiver):
             if (correctSeqNo && !corrupt)
                 # extract and deliver data
                 # send ACK for seqNo + 1 (next expected packet)
-                ack_pkt = bytearray([0, expectedSeqNo+1,]) ... ntf
+                ack_pkt = bytearray([0, expectedSeqNo+1,]) # finish with rest of TCP segment
                 self.simulator.put_to_socket(ack_pkt)
                 # increase expected sequence number
             else
                 # send NAK which is actually ACK for current seqNo
-                ack_pkt = bytearray([expectedSeqNo]) ... ntf
+                ack_pkt = bytearray([0, expectedSeqNo]) # finish with rest of TCP segment
                 self.simulator.put_to_socket(ack_pkt)
 
             
