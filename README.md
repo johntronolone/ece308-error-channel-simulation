@@ -6,14 +6,15 @@ sequence number: 32 bits
 
 ack number: 32 bits
 
-header length: 15 bits
+header length: 3 bits
 
 ACK: 1 bit
 
-unused: 48 bits
+unused: 60 bits
 
 receive window: 32 bits
 
 internet checksum: 32 bits
 
 data: 832 bits
+
