@@ -7,12 +7,11 @@ Created on Tue Apr 24 15:41:38 2018
 import channelsimulator
 
 class Segment(object):
+    HEAD_LEN = [int('01000000',2), 0] # 4 32-bit words, with unused space
     
     def _init_(self): # still have not included src/dest port #s
         self.seq_num = [0,0,0,0] # 32-bit 0
         self.ack_num = [0,0,0,0] # 32-bit 0
-        self.head_len = [int(01000000), 0] # 4 32-bit words, with unused space
-        self.rcv_win = [0,0]
         self.checks = [0,0]
         
     def checksum(packet): # computes in int, returns binary
@@ -28,12 +27,11 @@ class Segment(object):
             check += w
             if check > MOD:
                 check = (check+1) % MOD # overflow wrap-around
-        cs = "{:016b}".format(~check)
-        check_sum = [str(int(cs,2))[0:8], str(int(cs,2))[8:15]]
-        
-        return ~check
+        cs = bin(~check & 0xffff)[2:]
+        check_sum = [int(cs[0:8],2), int(cs[8:16],2)]
+        return check_sum
     
-    def make_pkt(self,seqn,ackn,data_bytes):
+    def make_pkt(self,seqn,ackn,rcv_win,data_bytes):
         """
         Get data from socket
         :return: bit string of header data
@@ -41,11 +39,11 @@ class Segment(object):
         
         self.seq_num = [seqn]
         self.ack_num = [ackn]
-        header = self.seq_num + self.ack_num + self.head_len + self.rcv_win + self.checks
-        packet = bytearray(header).append(data_bytes)
+        header = self.seq_num + self.ack_num + self.HEAD_LEN + rcv_win + self.checks
+        packet = bytearray(header) + data_bytes
         self.checksum = Segment.checksum(packet)
         header[10] = self.checks
-        packet = bytearray(header).append(data_bytes)
+        packet = bytearray(header) + (data_bytes)
         return packet
     
 if __name__ == "__main__":
