@@ -18,9 +18,7 @@ class Receiver(object):
 
 
 class TCP_Receiver(Receiver):
-    ACK_DATA = bytes(123); #ACK number
-
-    print(ACK_DATA);
+    #ACK_DATA = bytes(123); #ACK number
 
     def __init__(self):
         super(TCP_Receiver, self).__init__()
@@ -32,11 +30,29 @@ class TCP_Receiver(Receiver):
         # add session to log
         self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
         
+
+        # initialize sequence number
+
+        expectedSeqNo = 0
+
         while True:
             
             # receive data
             data = self.simulator.get_from_socket()
+            
              
+            
+            # rcvChecksum is checksum received in packe
+            rcvChecksum = data[160:191]
+
+            # computedChecksum is checksum computed from packet
+            computedChecksum = rcvChecksum
+            # insert computedChecksum function from stephen's sender
+            
+            # rcvSeqNo is sequence number of received TCP segment
+            rcvSeqNo = data[0:31]
+            
+            
             corrupt = True
             correctSeqNo = False
             
@@ -46,8 +62,7 @@ class TCP_Receiver(Receiver):
             else
                 correctSeqNo = False
 
-            # rcvChecksum is checksum received in packet
-            # computedChecksum is checksum computed from packet
+            
             if (rcvChecksum == computedChecksum)
                 corrupt = False
             else
@@ -56,9 +71,10 @@ class TCP_Receiver(Receiver):
             # check checksum
             if (correctSeqNo && !corrupt)
                 # extract and deliver data
-                # send ACK for seqNo
+                # send ACK for seqNo + 1 (next expected packet)
+                # increase expected sequence number
             else
-                # send ACK for seqNo - 1
+                # send NAK which is actually ACK for current seqNo
 
             
             # log received data
