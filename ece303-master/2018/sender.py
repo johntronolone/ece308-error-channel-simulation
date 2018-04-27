@@ -65,13 +65,13 @@ class TCPSender(BogoSender):
             except socket.timeout:
                 pass
             
-    def interchange(data_bytes):
-        #bytearray(random.getrandbits(8) for _ in xrange(size))
-        out = list()
+    def interchange(data_bytes): # Bro interleaver 
+        data = list(data_bytes)
+        out = []
         for i in range(1,128):
             o = int("0b"+"{:07b}".format(i)[::-1],2)
-            out(o) = data_bytes(i)
-        return out
+            out[o-1] = data_bytes[i-1]
+        return bytearray(out)
             
     def send(self,data):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
@@ -86,7 +86,7 @@ class TCPSender(BogoSender):
                 ack = self.simulator.get_from_socket()  # receive ACK
                 #a_check = ack(128:144)
                 a_check = tcp_segment.checksum(ack)
-                if (a_check == bin(2**16-1)) and (ack(64:95) == seq_num):
+                if (a_check == [15,15] and ack(64:95) == seq_num):
                     break
             except socket.timeout:
                 pass
