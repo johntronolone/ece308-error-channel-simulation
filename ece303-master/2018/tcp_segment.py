@@ -45,7 +45,7 @@ class Segment(object):
         header = self.seq_num + self.ack_num + self.HEAD_LEN + rcv_w + [0,0] + [0,0]
         packet = bytearray(header) + data_bytes
         header[12:14] = checksum(packet)
-        packet = bytearray(header) + (data_bytes)
+        packet = bytearray(header) + data_bytes
         return packet
     
 if __name__ == "__main__":
