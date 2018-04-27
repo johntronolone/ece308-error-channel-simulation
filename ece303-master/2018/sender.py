@@ -86,7 +86,7 @@ class TCPSender(BogoSender):
                 ack = self.simulator.get_from_socket()  # receive ACK
                 #a_check = ack(128:144)
                 a_check = tcp_segment.checksum(ack)
-                if (a_check == [15,15] and ack(64:95) == seq_num):
+                if (a_check == [15,15] and ack[4:8] == seq_num):
                     break
             except socket.timeout:
                 pass
