@@ -5,7 +5,13 @@ import channelsimulator
 import utils
 import tcp_segment
 
-
+def interleave(data_bytes): # BRO interleaver 
+        data = list(data_bytes)
+        out = [0]*128
+        for i in range(1,128):
+            o = int("0b"+"{:07b}".format(i)[::-1],2)
+            out[o-1] = data[i-1]
+        return bytearray(out)
 
 class Sender(object):
 
@@ -42,12 +48,13 @@ class BogoSender(Sender):
             except socket.timeout:
                 pass
 
-class TCPSender(BogoSender):
+class TCPSender(Sender):
     
     MSS = 1024
+    seq = 0
     
     def __init__(self):
-        super(RdtSender, self).__init__()
+        super(TCPSender, self).__init__()
         self.state = 0
         self.isn = 0
         
@@ -65,20 +72,28 @@ class TCPSender(BogoSender):
             except socket.timeout:
                 pass
             
-    def interchange(data_bytes):
-        #bytearray(random.getrandbits(8) for _ in xrange(size))
-        out = list()
-        for i in range(1,128):
-            o = int("0b"+"{:07b}".format(i)[::-1],2)
-            out(o) = data_bytes(i)
+    def get_frames(data_bytes):
+        d_size = 512
+        n_frames = len(data_bytes) // d_size
+        extra = len(data_bytes) % d_size
+        pad = 512-extra
+        out = []
+        for n in range(1,n_frames):
+            b = data_bytes[(n-1)*d_size:n*d_size]
+            out.append(interleave(b[0:128])+interleave(b[128:256])+interleave(b[256:384]) \
+                       +interleave(b[384:512]))
+        last = data_bytes[n_frames*d_size+extra:] + bytearray([0]*pad) # zero padding
+        out.append(interleave(last[0:128])+interleave(last[128:256])+interleave(last[256:384]) \
+                       +interleave(last[384:512]))
         return out
-            
+        
     def send(self,data):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
+        data_frames = Sender.get_frames(data)
         while True:
             try:
         #while self.state == 0:
-                segment = tcp_segment.Segment(setup=0,teardown=0)
+                segment = tcp_segment.Segment()
                 packet = tcp_segment.make_pkt(segment,data)
                 self.simulator.put_to_socket(packet) # send data
                 self.state = 1
@@ -86,12 +101,15 @@ class TCPSender(BogoSender):
                 ack = self.simulator.get_from_socket()  # receive ACK
                 #a_check = ack(128:144)
                 a_check = tcp_segment.checksum(ack)
-                if (a_check == bin(2**16-1)) and (ack(64:95) == seq_num):
+                if (a_check == [15,15] and ack[4:8] == seq_num):
                     break
             except socket.timeout:
                 pass
             
 if __name__ == "__main__":
     # test out BogoSender
-    sndr = BogoSender()
-    sndr.send(BogoSender.TEST_DATA)
+    #sndr = BogoSender()
+    #sndr.send(BogoSender.TEST_DATA)
+    tcp_sndr = TCPSender()
+    h = channelsimulator.random_bytes(128)
+    hint = interleave(h)
