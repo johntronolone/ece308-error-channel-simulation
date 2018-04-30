@@ -5,6 +5,22 @@ import channelsimulator
 import utils
 import tcp_segment
 
+def get_frames(data_bytes):
+        d_size = 512
+        n_frames = len(data_bytes) // d_size
+        extra = len(data_bytes) % d_size
+        pad = 512-extra
+        out = []
+        for n in range(1,n_frames+1):
+            bf = data_bytes[(n-1)*d_size:n*d_size]
+            out.append(interleave(bf[0:128])+interleave(bf[128:256])+interleave(bf[256:384]) \
+                       +interleave(bf[384:512]))
+        if extra > 0:
+            last = data_bytes[n_frames*d_size+extra:] + bytearray([0]*pad) # zero padding
+            out.append(interleave(last[0:128])+interleave(last[128:256])+interleave(last[256:384]) \
+                       +interleave(last[384:512]))
+        return out
+        
 def interleave(data_bytes): # BRO interleaver 
         data = list(data_bytes)
         out = [0]*128
@@ -72,29 +88,15 @@ class TCPSender(Sender):
             except socket.timeout:
                 pass
             
-    def get_frames(data_bytes):
-        d_size = 512
-        n_frames = len(data_bytes) // d_size
-        extra = len(data_bytes) % d_size
-        pad = 512-extra
-        out = []
-        for n in range(1,n_frames):
-            b = data_bytes[(n-1)*d_size:n*d_size]
-            out.append(interleave(b[0:128])+interleave(b[128:256])+interleave(b[256:384]) \
-                       +interleave(b[384:512]))
-        last = data_bytes[n_frames*d_size+extra:] + bytearray([0]*pad) # zero padding
-        out.append(interleave(last[0:128])+interleave(last[128:256])+interleave(last[256:384]) \
-                       +interleave(last[384:512]))
-        return out
-        
     def send(self,data):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
-        data_frames = Sender.get_frames(data)
+        data_frames = TCPSender.get_frames(data)
+        segment = tcp_segment.Segment()
+        packet = tcp_segment.make_pkt(segment,data)
         while True:
             try:
         #while self.state == 0:
-                segment = tcp_segment.Segment()
-                packet = tcp_segment.make_pkt(segment,data)
+                
                 self.simulator.put_to_socket(packet) # send data
                 self.state = 1
         #while self.state == 1:
@@ -110,6 +112,7 @@ if __name__ == "__main__":
     # test out BogoSender
     #sndr = BogoSender()
     #sndr.send(BogoSender.TEST_DATA)
-    tcp_sndr = TCPSender()
-    h = channelsimulator.random_bytes(128)
+    #tcp_sndr = TCPSender()
+    h = channelsimulator.random_bytes(1024)
     hint = interleave(h)
+    data_frames = get_frames(h)
