@@ -19,7 +19,7 @@ def checksum(packet): # computes in int, returns binary
             check += w
             if check > MOD:
                 check = (check+1) % MOD # overflow wrap-around
-        cs = bin(~check & 0xffff)[2:]
+        cs = "{:016b}".format(~check & 0xffffffff)[2:]
         check_sum = [int(cs[0:8],2), int(cs[8:16],2)]
         return check_sum
     
@@ -51,5 +51,6 @@ class Segment(object):
 if __name__ == "__main__":
     # test out BogoSender
     seg = Segment()
-    h = channelsimulator.random_bytes(512)
-    p = seg.make_pkt(1000,5000,2048,h)
+    h = channelsimulator.random_bytes(1)
+    p = seg.make_pkt(0,0,0,h)
+    print checksum(p)
