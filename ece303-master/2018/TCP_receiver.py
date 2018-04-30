@@ -35,7 +35,7 @@ class TCP_Receiver(Receiver):
         self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
         
         # initialize sequence number
-        expectedSeqNum = 0
+        expectedSeqNum = 11090
 
         timeout = 10
         timeout_start = time.time()
@@ -49,14 +49,32 @@ class TCP_Receiver(Receiver):
                 seqn = expectedSeqNum
                 ackn = 0            
                 rcv_win = 0
+                #data_bytes = 0
                 data_bytes = channelsimulator.random_bytes(104)
                 rcv_pkt = seg.make_pkt(seqn, ackn, rcv_win, data_bytes)
                 rcvChecksum = rcv_pkt[160:191]
-                rcvSeqNum = rcv_pkt[0:31]
-                rcvAckNum = rcv_pkt[32:63]
 
-                computedChecksum = tcp_segment.checksum(rcv_pkt)
+                print 'hello'
+#                print list(rcv_pkt[0:4])
+                print list(tcp_segment.checksum(rcv_pkt))
                 
+                # TODO: sum each byte of rcv_pkt, (with each summand a 16-bit integer made from the data)
+                        
+                print list(rcv_pkt[20:22])
+
+#                print int('{:032b}'.format(rcv_pkt[0:4]))
+    #                print(bytearray([113,123,155]))
+                
+                #rcvSeqNum = '{:032b}'.format(rcv_pkt[0:4])
+                rcvSeqNum = 0;
+                rcvAckNum = rcv_pkt[32:63]
+    
+                #print rcvSeqNum                
+
+                
+                #computedChecksum = tcp_segment.checksum(rcv_pkt)
+                    
+                computedChecksum = 0
 
                 # TODO: log that packet received
             
@@ -80,18 +98,18 @@ class TCP_Receiver(Receiver):
                 # act on the above conditions
             
                 # if valid
-                if (hasCorrectSeqNum and not isCorrupt):
+                #if (hasCorrectSeqNum and not isCorrupt):
                     # do stuff
                     # send ack with expectedSeqNo+1
                     # do i need to call tcp_segment.Segment() each time i make a packet??????????
-                    ack_pkt = seg.make_pkt(rcvAckNum, expectedSeqNum+1, rcv_win, data_bytes)
+                    #ack_pkt = seg.make_pkt(rcvAckNum, expectedSeqNum+1, rcv_win, data_bytes)
                     #self.simulator.put_to_socket(ack_pkt)
                     #self.logger.info("Got data from socket: {}".format(data.decode('ascii')))
                     # TODO: log ack for successfully received packet
-                    break
-                else: # not valid packet
+                #    break
+                #else: # not valid packet
                     # send ack with expectedSeqNo
-                    ack_pkt = seg.make_pkt(rcvAckNum, expectedSeqNum, rcv_win, data_bytes)
+                    #ack_pkt = seg.make_pkt(rcvAckNum, expectedSeqNum, rcv_win, data_bytes)
                     
                     #self.simulator.put_to_socket(ack_pkt)
                     #self.logger.info("Got data from socket: {}".format(data.decode('ascii')))
@@ -103,8 +121,10 @@ class TCP_Receiver(Receiver):
  
             # when this point in the loop is reached, a packet has been successfully received
             # increase expectedSeqNo and add 10 seconds to timeout
-            expectedSeqNum += 1
-            timeout += 10
+                #print 'this should print...'
+                expectedSeqNum += 1
+                print(expectedSeqNum)
+                timeout += 10
 
         # END TIME.TIME() loop
 
