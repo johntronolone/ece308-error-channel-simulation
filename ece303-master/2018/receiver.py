@@ -31,8 +31,8 @@ class TCP_Receiver(Receiver):
 
     def receive(self):
         
-        # add session to log
-        self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
+        # TODO: add session to log
+        #self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
         
         # initialize sequence number
         expectedSeqNum = 0
@@ -47,10 +47,10 @@ class TCP_Receiver(Receiver):
                     
                 data = self.simulator.get_from_socket() 
                 #self.logger.info(
-                print 'received data from socket: {}'.format(data.decode('ascii'))
+                #print 'received data from socket: {}'.format(data.decode('ascii'))
                 #)
                 
-                print data 
+                workable_data = list(data) 
                 
                 # TODO: deinterleave and extract data ...
                     
@@ -61,10 +61,13 @@ class TCP_Receiver(Receiver):
                 # TODO: data_bytes = all zeros
 
                 computedChecksum = tcp_segment.checksum(data)
-                
+                 
                 isCorrupt = True
                 hasCorrectSeqNum = False
 
+                print workable_data
+                rcvSeqNum = workable_data[0:4]
+    
                 # check if sequence number of received packet matches expected
                 if rcvSeqNum == expectedSeqNum:
                     hasCorrectSeqNum = True
