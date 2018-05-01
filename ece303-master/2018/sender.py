@@ -13,20 +13,28 @@ def get_frames(data_bytes):
         out = []
         for n in range(1,n_frames+1):
             bf = data_bytes[(n-1)*d_size:n*d_size]
-            out.append(interleave(bf[0:128])+interleave(bf[128:256])+interleave(bf[256:384]) \
-                       +interleave(bf[384:512]))
+            out.append(bf)
+            #out.append(interleave(bf[0:128])+interleave(bf[128:256])+interleave(bf[256:384])+interleave(bf[384:512]))
         if extra > 0:
-            last = data_bytes[n_frames*d_size+extra:] + bytearray([0]*pad) # zero padding
-            out.append(interleave(last[0:128])+interleave(last[128:256])+interleave(last[256:384]) \
-                       +interleave(last[384:512]))
+            last = data_bytes[n_frames*d_size:] + bytearray([0]*pad) # zero padding
+            out.append(last)
+            #out.append(interleave(last[0:128])+interleave(last[128:256])+interleave(last[256:384]) +interleave(last[384:512]))
         return out
         
 def interleave(data_bytes): # BRO interleaver 
         data = list(data_bytes)
         out = [0]*128
+        for i in range(0,128):
+            o = int("0b"+"{:07b}".format(i)[::-1],2)
+            out[o] = data[i]
+        return bytearray(out)
+    
+def deinterleave(data_bytes): # BRO deinterleaver 
+        data = list(data_bytes)
+        out = [0]*128
         for i in range(1,128):
             o = int("0b"+"{:07b}".format(i)[::-1],2)
-            out[o-1] = data[i-1]
+            out[i-1] = data[o-1]
         return bytearray(out)
 
 class Sender(object):
@@ -92,6 +100,11 @@ class TCPSender(Sender):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
         data_frames = TCPSender.get_frames(data)
         segment = tcp_segment.Segment()
+        isn = 0
+        seq = isn
+        for f in data_frames:
+            seq += 16 + 512
+            #if f > 
         packet = tcp_segment.make_pkt(segment,data)
         while True:
             try:
@@ -103,7 +116,7 @@ class TCPSender(Sender):
                 ack = self.simulator.get_from_socket()  # receive ACK
                 #a_check = ack(128:144)
                 a_check = tcp_segment.checksum(ack)
-                if (a_check == [255,255] and ack[4:8] == seq_num):
+                if (a_check == [0,0] and ack[4:8] == seq_num):
                     break
             except socket.timeout:
                 pass
@@ -113,6 +126,7 @@ if __name__ == "__main__":
     #sndr = BogoSender()
     #sndr.send(BogoSender.TEST_DATA)
     #tcp_sndr = TCPSender()
-    h = channelsimulator.random_bytes(1024)
-    hint = interleave(h)
+    h = channelsimulator.random_bytes(1025)
+    #hint = interleave(h)
+    #dhint = deinterleave(hint)
     data_frames = get_frames(h)
