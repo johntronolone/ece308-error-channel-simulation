@@ -5,8 +5,7 @@ import channelsimulator
 import utils
 import tcp_segment
 
-def get_frames(data_bytes):
-        d_size = 512
+def get_frames(data_bytes,d_size):
         n_frames = len(data_bytes) // d_size
         extra = len(data_bytes) % d_size
         pad = 512-extra
@@ -98,35 +97,43 @@ class TCPSender(Sender):
             
     def send(self,data):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
-        data_frames = TCPSender.get_frames(data)
+        data_frames = get_frames(data)
         segment = tcp_segment.Segment()
         isn = 0
         seq = isn
+        ackn = 0
+        rcv_win = 0
+        head_len = 16
+        d_size = 512
+        lsn = 100 # this many +1 different possible sequence #s
+        packets = []
         for f in data_frames:
-            seq += 16 + 512
-            #if f > 
-        packet = tcp_segment.make_pkt(segment,data)
+            np = tcp_segment.make_pkt(segment,seq,ackn,rcv_win,f)
+            packets.append(np)
+            seq += head_len + d_size
+            if f > isn + (head_len + d_size)*lsn:
+                seq = isn
         while True:
             try:
         #while self.state == 0:
-                
-                self.simulator.put_to_socket(packet) # send data
+                for p in packets:
+                    self.simulator.put_to_socket(p) # send data
                 self.state = 1
         #while self.state == 1:
                 ack = self.simulator.get_from_socket()  # receive ACK
                 #a_check = ack(128:144)
                 a_check = tcp_segment.checksum(ack)
-                if (a_check == [0,0] and ack[4:8] == seq_num):
+                if (a_check == [0,0] and ack[0:4] == seq):
                     break
             except socket.timeout:
                 pass
-            
+        return packets
 if __name__ == "__main__":
     # test out BogoSender
     #sndr = BogoSender()
     #sndr.send(BogoSender.TEST_DATA)
-    #tcp_sndr = TCPSender()
-    h = channelsimulator.random_bytes(1025)
+    tcp_sndr = TCPSender()
+    h = channelsimulator.random_bytes(512)
     #hint = interleave(h)
     #dhint = deinterleave(hint)
-    data_frames = get_frames(h)
+    TCPSender.send(tcp_sndr,h)
