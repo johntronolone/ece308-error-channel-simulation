@@ -9,7 +9,7 @@ import channelsimulator
 def checksum(packet): # computes in int, returns binary
         p_list = list(packet) # list of data as 8-bit integers
         w_list = [] # list of 16-bit integer words
-        for i in range(0,len(p_list)-1):
+        for i in range(0,len(p_list)):
             if i%2 == 0:
                 h1 = int("{:08b}".format(p_list[i]) + "{:08b}".format(p_list[i+1]),2)
                 w_list.append(h1)
@@ -19,7 +19,7 @@ def checksum(packet): # computes in int, returns binary
             check += w
             if check > MOD:
                 check = (check+1) % MOD # overflow wrap-around
-        cs = "{:016b}".format(~check & 0xffffffff)[2:]
+        cs = "{:016b}".format(~check & 0xffff)
         check_sum = [int(cs[0:8],2), int(cs[8:16],2)]
         return check_sum
     
@@ -51,6 +51,7 @@ class Segment(object):
 if __name__ == "__main__":
     # test out BogoSender
     seg = Segment()
-    h = channelsimulator.random_bytes(1)
-    p = seg.make_pkt(0,0,0,h)
+    h = channelsimulator.random_bytes(190)
+    p = seg.make_pkt(10000,1000,500,h)
     print checksum(p)
+    
