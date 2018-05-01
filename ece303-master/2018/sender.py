@@ -97,21 +97,21 @@ class TCPSender(Sender):
             
     def send(self,data):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
-        data_frames = get_frames(data)
+        d_size = 512
+        data_frames = get_frames(data,d_size)
         segment = tcp_segment.Segment()
         isn = 0
         seq = isn
         ackn = 0
         rcv_win = 0
         head_len = 16
-        d_size = 512
         lsn = 100 # this many +1 different possible sequence #s
         packets = []
         for f in data_frames:
-            np = tcp_segment.make_pkt(segment,seq,ackn,rcv_win,f)
+            np = segment.make_pkt(seq,ackn,rcv_win,f)
             packets.append(np)
             seq += head_len + d_size
-            if f > isn + (head_len + d_size)*lsn:
+            if seq > isn + (head_len + d_size)*lsn:
                 seq = isn
         while True:
             try:
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     #sndr = BogoSender()
     #sndr.send(BogoSender.TEST_DATA)
     tcp_sndr = TCPSender()
-    h = channelsimulator.random_bytes(512)
+    h = channelsimulator.random_bytes(2000)
     #hint = interleave(h)
     #dhint = deinterleave(hint)
     TCPSender.send(tcp_sndr,h)

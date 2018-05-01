@@ -9,7 +9,7 @@ import channelsimulator
 def checksum(packet): # computes in int, returns binary
         p_list = list(packet) # list of data as 8-bit integers
         w_list = [] # list of 16-bit integer words
-        for i in range(0,len(p_list)):
+        for i in range(0,len(p_list)-1):
             if i%2 == 0:
                 h1 = int("{:08b}".format(p_list[i]) + "{:08b}".format(p_list[i+1]),2)
                 w_list.append(h1)
