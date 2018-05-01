@@ -36,6 +36,7 @@ class Segment(object):
         Get data from socket
         :return: bit string of header data
         """
+        
         sq = "{:032b}".format(seqn)
         ac = "{:032b}".format(ackn)
         rw = "{:016b}".format(rcv_win)
