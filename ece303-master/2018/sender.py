@@ -100,34 +100,57 @@ class TCPSender(Sender):
         d_size = 512
         data_frames = get_frames(data,d_size)
         segment = tcp_segment.Segment()
-        isn = 0
+        isn = 0 # initial sequence #
+        ian = 0 # initial acknowledgement #
         seq = isn
-        ackn = 0
+        ackn = ian
         rcv_win = 0
-        head_len = 16
+        head_len = 16 # header length: 16 bytes
         lsn = 100 # this many +1 different possible sequence #s
         packets = []
-        for f in data_frames:
+        for f in data_frames: # make all packets associate each w/ sequence #
             np = segment.make_pkt(seq,ackn,rcv_win,f)
             packets.append(np)
             seq += head_len + d_size
-            if seq > isn + (head_len + d_size)*lsn:
+            ackn += head_len + d_size
+            if seq > isn + (head_len + d_size)*lsn: # cycle back to first sequence #
                 seq = isn
-        while True:
-            try:
-        #while self.state == 0:
-                for p in packets:
+            if ackn > ian + (head_len + d_size)*lsn:
+                ackn = ian
+        for p in packets:
+            seq = p[0:4]
+            while self.state == 0:
+                try: 
                     self.simulator.put_to_socket(p) # send data
-                self.state = 1
-        #while self.state == 1:
-                ack = self.simulator.get_from_socket()  # receive ACK
-                #a_check = ack(128:144)
-                a_check = tcp_segment.checksum(ack)
-                if (a_check == [0,0] and ack[0:4] == seq):
-                    break
-            except socket.timeout:
-                pass
-        return packets
+                    ack = self.simulator.get_from_socket()  # receive ACK
+                    #a_check = ack(128:144)
+                    a_check = tcp_segment.checksum(ack)
+                    if (a_check == [0,0] and ack[0:4] == seq): # not corrupt and correct seq. #
+                        # extract and store data
+                        self.state = 1 #
+                    break    
+                except socket.timeout:
+                    pass
+        '''
+        b_seq = 0
+        w_size = 10
+        n_seq = b_seq
+        timeout = 0.2
+        while n_seq < b_seq + w_size*(head_len + d_size):
+            self.simulator.put_to_socket(packets[n_seq])
+            if b_seq == n_seq:
+                timeout_start = time.time()
+            b_seq += (head_len + d_size)
+        ack = self.simulator.get_from_socket()
+        r_seq = ack[0:4]
+        r_check = tcp_segment.checksum(ack)
+        if r_check == [0,0]:
+            b_seq = 
+            
+        if time.time() == timeout_start+timeout:
+            timeout_start = time.time()
+            r_packets = packets[]
+        '''
 if __name__ == "__main__":
     # test out BogoSender
     #sndr = BogoSender()
