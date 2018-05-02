@@ -24,7 +24,7 @@ class Receiver(object):
 
 
 class TCP_Receiver(Receiver):
-    #ACK_DATA = bytes(123); #ACK number
+    ACK_DATA = bytes(420)
 
     def __init__(self):
         super(TCP_Receiver, self).__init__()
@@ -92,7 +92,11 @@ class TCP_Receiver(Receiver):
                     #nak_pkt = segment.make_pkt(
                     #self.simulator.put_to_socket(nak_pkt)                
                     print 'nak sent'
- 
+                
+                self.simulator.put_to_socket(TCP_Receiver.ACK_DATA)
+
+                #print 'attempting to close port'
+                #self.simulator.rcvr_disconnect()
                 timeout += 10
 
         # END TIME.TIME() loop
