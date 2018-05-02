@@ -124,17 +124,18 @@ class TCPSender(Sender):
                     self.simulator.put_to_socket(p) # send data
                     ack = self.simulator.get_from_socket()  # receive ACK
                     #a_check = ack(128:144)
-                    a_check = tcp_segment.checksum(ack)
+                    a_check = tcp_segment.checksum(ack) # check for corruption
                     if (a_check == [0,0] and ack[0:4] == seq): # not corrupt and correct seq. #
                         # extract and store data
-                        self.state = 1 #
+                        self.state = 1 # send next packet 
                     break    
                 except socket.timeout:
                     pass
         '''
-        b_seq = 0
-        w_size = 10
-        n_seq = b_seq
+        # GO-BACK-N implementation 
+        b_seq = 0 # base sequence number
+        w_size = 10 # number of packets in window
+        n_seq = b_seq # next sequence #, start at base
         timeout = 0.2
         while n_seq < b_seq + w_size*(head_len + d_size):
             self.simulator.put_to_socket(packets[n_seq])
@@ -148,6 +149,7 @@ class TCPSender(Sender):
             b_seq = 
             
         if time.time() == timeout_start+timeout:
+            self.logger.info("Timeout on seqence number: {}. Resending...".format(b_seq))
             timeout_start = time.time()
             r_packets = packets[]
         '''
