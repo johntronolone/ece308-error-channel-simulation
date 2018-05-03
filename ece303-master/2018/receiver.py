@@ -125,7 +125,7 @@ class TCP_Receiver(Receiver):
 
         # END TIME.TIME() loop
 
-def receive(self):
+    def receive(self):
 
         isn = 1
         lsn = 100
@@ -134,7 +134,7 @@ def receive(self):
         #self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
         
         # initialize sequence number
-        e_seq = 0 # expected sequence number
+        e_seq = 1 # expected sequence number
         
         data_bytes = bytearray(512) 
         rcv_win = 255
@@ -144,11 +144,11 @@ def receive(self):
         #idx = 1
         segment = tcp_segment.Segment()
         ack_pkt = segment.make_pkt(0, 0, 0, data_bytes)
-        
+        e_seq = isn
         head_len = 16
         d_size = 512
         while True: # break this loop when packet has been successfully received, else keep attempting to receive packet from channel
-            e_seq = isn
+           
             
             data = self.simulator.get_from_socket() 
             workable_data = list(data)
@@ -158,26 +158,27 @@ def receive(self):
             computedChecksum = tcp_segment.checksum(data)
             isCorrupt = True
             hasCorrectSeqNum = False
-            ack_pkt = segment.make_pkt(rcvAckNum, 0, rcv_win, data_bytes) # initial ACK packet
+            #ack_pkt = segment.make_pkt(rcvAckNum, 0, rcv_win, data_bytes) # initial ACK packet
             
             if computedChecksum == [0, 0] and rcvSeqNum == e_seq: # not corrupted and expected sequence #
                 isCorrupt = False
                 ack_pkt = segment.make_pkt(rcvAckNum, e_seq, rcv_win, data_bytes)
-                self.simulator.u_send(ack_pkt)
-                #self.simulator.put_to_socket(ack_pkt)
+                #self.simulator.u_send(ack_pkt)
+                self.simulator.put_to_socket(ack_pkt)
                 print 'ack sent'
                 
                 e_seq +=  16 + 512
                 
                 if e_seq > isn + (16 + 512)*lsn:
                     e_seq = isn
+                print e_seq
             else:
                 isCorrupt = True
                 #segment = tcp_segment.Segment()
                 #nak_pkt = segment.make_pkt(rcvAckNum, expectedSeqNum, rcv_win, data_bytes)
                 #self.simulator.u_send(nak_pkt)
-                self.simulator.u_send(ack_pkt) # discard data, resend last ack #
-                #self.simulator.put_to_socket(nak_pkt) 
+                #self.simulator.u_send(ack_pkt) # discard data, resend last ack #
+                self.simulator.put_to_socket(ack_pkt) 
                
                 print 'receiver: nak sent for expected sequence number:'
                 print e_seq
