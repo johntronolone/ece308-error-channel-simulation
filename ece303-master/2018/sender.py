@@ -97,7 +97,7 @@ class TCPSender(Sender):
             except socket.timeout:
                 pass
             
-    def send(self,data):
+    def send_single(self,data): # rdt 2.2 sender 
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
         d_size = 512
         data_frames = get_frames(data,d_size)
@@ -144,6 +144,99 @@ class TCPSender(Sender):
                     #break    
                 except socket.timeout:
                     pass
+                
+    def send(self,data): # Go-Back-N protocol
+        self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
+        d_size = 512
+        data_frames = get_frames(data,d_size)
+        segment = tcp_segment.Segment()
+        isn = 1 # initial sequence #
+        ian = 1 # initial acknowledgement #
+        seq = isn
+        ackn = ian
+        rcv_win = 0
+        head_len = 16 # header length: 16 bytes
+        lsn = 100 # this many +1 different possible sequence #s
+        packets = []
+        for f in data_frames: # make all packets associate each w/ sequence #
+            np = segment.make_pkt(seq,ackn,rcv_win,f)
+            packets.append(np)
+            seq += head_len + d_size
+            ackn += head_len + d_size
+            if seq > isn + (head_len + d_size)*lsn: # cycle back to first sequence #
+                seq = isn
+            if ackn > ian + (head_len + d_size)*lsn:
+                ackn = ian
+        
+        pn = 1 # packet number
+        b_seq = isn # base sequence number
+        w_size = 10 # number of packets in window
+        n_seq = b_seq # next sequence #, start at base
+        timeout = 0.5
+        self.state = 0
+        while self.state == 0:
+            w_end = (b_seq + w_size*(head_len + d_size))
+            max_seq = (ian + (head_len + d_size)*lsn)
+            overflow = w_end - max_seq
+            rem_space = max_seq - n_seq
+            
+            while n_seq < w_end or (overflow > 0 and rem_space + overflow >  0): # send all segments in window
+                #np = (n_seq - b_seq)/(head_len + d_size) # number of segments to send
+                if pn == len(packets): # reached last segment
+                    self.state = 1
+                self.simulator.put_to_socket(packets[pn-1])
+                if b_seq == n_seq:
+                    timeout_start = time.time()
+                n_seq += (head_len + d_size) 
+                if rem_space < 0: # wrap around next sequence #
+                    n_seq = isn
+                pn += 1
+            ack = self.simulator.get_from_socket()
+            r_seq = ack[4:8] # acknowledgment number
+            r_check = tcp_segment.checksum(ack)
+            if r_check == [0,0]:  # not corrupted
+                if r_seq == [0]*4: # check for initial case
+                    break
+                else:
+                    b_seq = r_seq + (head_len + d_size) # increase base of window
+                if b_seq > max_seq: # wrap around base sequence #
+                    b_seq = isn
+                if b_seq == n_seq:
+                    break # stop timer
+                else:
+                    timeout_start = time.time() # restart timer
+            if time.time() == timeout_start+timeout: # timeout
+                self.logger.info("Timeout on seqence number: {}. Resending...".format(b_seq))
+                n_seq = b_seq # reset next sequence + to base of window
+                #timeout_start = time.time()
+            
+        '''
+        for p in packets:
+            seq = p[0:4]
+            self.state = 0
+            while self.state == 0:
+                try:
+                    self.simulator.u_send(p) 
+                    #self.simulator.put_to_socket(p) # send data
+                    ack = self.simulator.get_from_socket()  # receive ACK
+                    #a_check = ack(128:144)
+                    a_check = tcp_segment.checksum(ack) # check for corruption
+                    #print 'this should appear'
+                    #print 'sender: received ack' 
+                    #print ack
+                    #print 'sender: received ack checksum'
+                    #print a_check
+                    #print list(ack[4:8])
+                    if (a_check == [0,0] and ack[4:8] == seq): # not corrupt and correct seq. #
+                        # extract and store data
+                        print 'sender: correct ack number and not corrupt'
+                        self.state = 1 # send next packet 
+                    else:
+                        print 'sender: incorrect ack number or corrcupt'
+                    #break    
+                except socket.timeout:
+                    pass
+        '''
         '''
         # GO-BACK-N implementation 
         b_seq = 0 # base sequence number
@@ -171,12 +264,13 @@ if __name__ == "__main__":
     #sndr = BogoSender()
     #sndr.send(BogoSender.TEST_DATA)
     tcp_sndr = TCPSender()
-    h = channelsimulator.random_bytes(1000000)
+    data_size = 1000000 # number of bytes in data
+    h = channelsimulator.random_bytes(data_size)
     #hint = interleave(h)
     #dhint = deinterleave(hint)
     start_time = time.time()
     TCPSender.send(tcp_sndr,h)
     elapsed_time = time.time() - start_time
-    print elapsed_time
-    thruput = 1000000/elapsed_time
+    print "Elapsed Time: {} seconds".format(elapsed_time)
+    thruput = "Throughput: {} Kbps".format(data_size/elapsed_time)
     print thruput
