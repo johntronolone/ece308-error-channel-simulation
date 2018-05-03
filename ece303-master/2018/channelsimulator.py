@@ -12,7 +12,7 @@ import utils
 
 
 def random_bytes(n):
-    return bytearray([randint(0, 225) for i in xrange(n)])
+    return bytearray([randint(0, 127) for i in xrange(n)])
 
 
 def slice_frames(data_bytes):
@@ -93,7 +93,12 @@ class ChannelSimulator(object):
         :param data_bytes: byte array to send to socket
         :return:
         """
-        self.sndr_socket.sendto(data_bytes, (self.ip, self.sndr_port))
+        
+        if data_bytes is None:
+            self.sndr_socket.sendto(bytearray(512+16), (self.ip, self.sndr_port))
+            print 'pls dont print'
+        else:    
+            self.sndr_socket.sendto(data_bytes, (self.ip, self.sndr_port))
 
     def get_from_socket(self):
         """

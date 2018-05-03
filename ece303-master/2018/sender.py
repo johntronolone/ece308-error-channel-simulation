@@ -5,6 +5,8 @@ import channelsimulator
 import utils
 import tcp_segment
 
+import time
+
 def get_frames(data_bytes,d_size):
         n_frames = len(data_bytes) // d_size
         extra = len(data_bytes) % d_size
@@ -119,16 +121,27 @@ class TCPSender(Sender):
                 ackn = ian
         for p in packets:
             seq = p[0:4]
+            self.state = 0
             while self.state == 0:
-                try: 
-                    self.simulator.put_to_socket(p) # send data
+                try:
+                    self.simulator.u_send(p) 
+                    #self.simulator.put_to_socket(p) # send data
                     ack = self.simulator.get_from_socket()  # receive ACK
                     #a_check = ack(128:144)
                     a_check = tcp_segment.checksum(ack) # check for corruption
-                    if (a_check == [0,0] and ack[0:4] == seq): # not corrupt and correct seq. #
+                    #print 'this should appear'
+                    #print 'sender: received ack' 
+                    #print ack
+                    #print 'sender: received ack checksum'
+                    #print a_check
+                    #print list(ack[4:8])
+                    if (a_check == [0,0] and ack[4:8] == seq): # not corrupt and correct seq. #
                         # extract and store data
+                        print 'sender: correct ack number and not corrupt'
                         self.state = 1 # send next packet 
-                    break    
+                    else:
+                        print 'sender: incorrect ack number or corrcupt'
+                    #break    
                 except socket.timeout:
                     pass
         '''
@@ -158,7 +171,12 @@ if __name__ == "__main__":
     #sndr = BogoSender()
     #sndr.send(BogoSender.TEST_DATA)
     tcp_sndr = TCPSender()
-    h = channelsimulator.random_bytes(2000)
+    h = channelsimulator.random_bytes(1000000)
     #hint = interleave(h)
     #dhint = deinterleave(hint)
+    start_time = time.time()
     TCPSender.send(tcp_sndr,h)
+    elapsed_time = time.time() - start_time
+    print elapsed_time
+    thruput = 1000000/elapsed_time
+    print thruput
