@@ -156,17 +156,19 @@ class TCPSender(Sender):
         ackn = ian
         rcv_win = 0
         head_len = 16 # header length: 16 bytes
-        lsn = 100 # this many +1 different possible sequence #s
+        #lsn = 100 # this many +1 different possible sequence #s
+        last_seq = 0
         packets = []
         for f in data_frames: # make all packets associate each w/ sequence #
             np = segment.make_pkt(seq,ackn,rcv_win,f)
             packets.append(np)
+            last_seq = seq
             seq += head_len + d_size
             ackn += head_len + d_size
-            if seq > isn + (head_len + d_size)*lsn: # cycle back to first sequence #
-                seq = isn
-            if ackn > ian + (head_len + d_size)*lsn:
-                ackn = ian
+            #if seq > isn + (head_len + d_size)*lsn: # cycle back to first sequence #
+            #    seq = isn
+            #if ackn > ian + (head_len + d_size)*lsn:
+            #    ackn = ian
         
         pn = 1 # packet number
         b_seq = isn # base sequence number
@@ -176,21 +178,30 @@ class TCPSender(Sender):
         self.state = 0
         while self.state == 0:
             w_end = (b_seq + w_size*(head_len + d_size))
-            max_seq = (ian + (head_len + d_size)*lsn)
-            overflow = w_end - max_seq
-            rem_space = max_seq - n_seq
-             
-            while n_seq < w_end or (overflow > 0 and rem_space + overflow >  0): # send all segments in window
+            #max_seq = (ian + (head_len + d_size)*lsn)
+            #overflow = w_end - max_seq
+            #rem_space = max_seq - n_seq
+            pn = 1 
+            while n_seq < w_end and pn <=len(packets): # or (overflow > 0 and rem_space + overflow > 0): # send all segments in window
                 #np = (n_seq - b_seq)/(head_len + d_size) # number of segments to send
-                if pn == len(packets): # reached last segment
-                    self.state = 1
+                #if pn <= len(packets):
+                #self.simulator.u_send(packets[pn-1])                
                 self.simulator.put_to_socket(packets[pn-1])
+                print 'sender: sent packet of index (pn):' 
+                print pn
+                print 'sender: with seq number'
+                print n_seq
+                #self.simulator.put_to_socket(packets[pn-1]) #[pn-1]
                 if b_seq == n_seq:
                     timeout_start = time.time()
                 n_seq += (head_len + d_size) 
-                if rem_space < 0: # wrap around next sequence #
-                    n_seq = isn
+                #if rem_space <= 0: # wrap around next sequence #
+                #    n_seq = isn
                 pn += 1
+                #rem_space = max_seq - n_seq
+                #print 'sent equence number:'
+                #print n_seq
+                #print w_end
             ack = self.simulator.get_from_socket()
             #r_seq = ack[4:8] # acknowledgment number
             r_seq = int("{:08b}".format(ack[4]) + "{:08b}".format(ack[5]) + "{:08b}".format(ack[6]) + "{:08b}".format(ack[7]), 2)
@@ -202,21 +213,45 @@ class TCPSender(Sender):
                 if r_seq == [0]*4: # check for initial case
                     break
                 else:
-                    b_seq = r_seq + (head_len + d_size) # increase base of window
-                if b_seq > max_seq: # wrap around base sequence #
-                    b_seq = isn
+                    pn = (r_seq - 1)/528 - 1
+
+                    b_seq = r_seq + (head_len + d_size) - 528 # increase base of window
+                    w_end = (b_seq + w_size*(head_len + d_size))
+                    #if w_end > max_seq:
+                    #    w_end = isn + w_end - max_seq
+                #if b_seq > max_seq: # wrap around base sequence #
+                    #b_seq = isn
+                    #w_end = (b_seq + w_size*(head_len + d_size))
                 if b_seq == n_seq:
-                    boo = False
+                    #timeout_start = time.time() # pause timer
+                    boo = False # pause timer
                     #break # stop timer
                 else:
                     timeout_start = time.time() # restart timer
-            if time.time() == timeout_start+timeout or boo is False: # timeout
+
+            print ''
+            print 'pn:'
+            print pn
+            print 'len(packets)'
+            print len(packets)
+            print 'b_seq:'
+            print b_seq
+            print 'last_seq'
+            print last_seq
+            print 'r_seq'
+            print r_seq
+            print ''
+            if pn == len(packets) and r_seq == last_seq: # reached last segment #b_seq == last_seq and 
+                print 'this should print?'
+                self.state = 1
+            if time.time() > timeout_start+timeout or boo is True: # timeout or timer paused
                 self.logger.info("Timeout on seqence number: {}. Resending...".format(b_seq))
                 np = (n_seq - b_seq)/(head_len + d_size) 
                 pn -= np
                 n_seq = b_seq # reset next sequence + to base of window
                 #timeout_start = time.time()
-            
+            if r_seq == last_seq:
+                self.state = 1
         '''
         for p in packets:
             seq = p[0:4]
@@ -271,7 +306,7 @@ if __name__ == "__main__":
     #sndr = BogoSender()
     #sndr.send(BogoSender.TEST_DATA)
     tcp_sndr = TCPSender()
-    data_size = 1000000 # number of bytes in data
+    data_size = 20000 # number of bytes in data
     h = channelsimulator.random_bytes(data_size)
     #hint = interleave(h)
     #dhint = deinterleave(hint)
