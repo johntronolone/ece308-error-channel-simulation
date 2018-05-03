@@ -127,45 +127,15 @@ class TCPSender(Sender):
                     self.simulator.u_send(p) 
                     #self.simulator.put_to_socket(p) # send data
                     ack = self.simulator.get_from_socket()  # receive ACK
-                    #a_check = ack(128:144)
                     a_check = tcp_segment.checksum(ack) # check for corruption
-                    #print 'this should appear'
-                    #print 'sender: received ack' 
-                    #print ack
-                    #print 'sender: received ack checksum'
-                    #print a_check
-                    #print list(ack[4:8])
                     if (a_check == [0,0] and ack[4:8] == seq): # not corrupt and correct seq. #
                         # extract and store data
                         print 'sender: correct ack number and not corrupt'
                         self.state = 1 # send next packet 
                     else:
                         print 'sender: incorrect ack number or corrcupt'
-                    #break    
                 except socket.timeout:
                     pass
-        '''
-        # GO-BACK-N implementation 
-        b_seq = 0 # base sequence number
-        w_size = 10 # number of packets in window
-        n_seq = b_seq # next sequence #, start at base
-        timeout = 0.2
-        while n_seq < b_seq + w_size*(head_len + d_size):
-            self.simulator.put_to_socket(packets[n_seq])
-            if b_seq == n_seq:
-                timeout_start = time.time()
-            b_seq += (head_len + d_size)
-        ack = self.simulator.get_from_socket()
-        r_seq = ack[0:4]
-        r_check = tcp_segment.checksum(ack)
-        if r_check == [0,0]:
-            b_seq = 
-            
-        if time.time() == timeout_start+timeout:
-            self.logger.info("Timeout on seqence number: {}. Resending...".format(b_seq))
-            timeout_start = time.time()
-            r_packets = packets[]
-        '''
 if __name__ == "__main__":
     # test out BogoSender
     #sndr = BogoSender()
