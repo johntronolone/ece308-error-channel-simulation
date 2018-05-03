@@ -102,8 +102,8 @@ class TCPSender(Sender):
         d_size = 512
         data_frames = get_frames(data,d_size)
         segment = tcp_segment.Segment()
-        isn = 0 # initial sequence #
-        ian = 0 # initial acknowledgement #
+        isn = 1 # initial sequence #
+        ian = 1 # initial acknowledgement #
         seq = isn
         ackn = ian
         rcv_win = 0
